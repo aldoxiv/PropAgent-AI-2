@@ -53,7 +53,7 @@ export function AgentChat({ initialProperty, onClose }: AgentChatProps) {
       // Get AI response
       const result = await getAgentResponse(messages.concat(userMessage), lead, initialProperty);
       
-      let aiText = result.text || "Estou processando isso para você.";
+      let aiText = result.text || "";
       
       if (result.functionCalls) {
         for (const call of result.functionCalls) {
@@ -94,7 +94,7 @@ export function AgentChat({ initialProperty, onClose }: AgentChatProps) {
               console.error("Failed to fetch settings for welcome email", e);
             }
 
-            aiText = `Obrigado, ${name}. Registrei seu interesse e enviei um e-mail de boas-vindas para ${email}. Como posso ajudar mais?`;
+            if (!aiText) aiText = `Obrigado, ${name}. Registrei seu interesse e enviei um e-mail de boas-vindas para ${email}. Como posso ajudar mais?`;
           }
 
           if (call.name === 'qualifyLead') {
@@ -114,20 +114,21 @@ export function AgentChat({ initialProperty, onClose }: AgentChatProps) {
               const updatedLead = { ...lead, ...qualificationData } as Lead;
               setLead(updatedLead);
               
-              // Trigger auto-reminder
               await createAutoReminder(updatedLead, LeadStatus.INTERESTED);
               
               // Push to CRM after qualification
-              aiText = "Obrigado por esses detalhes. Estou atualizando nossa equipe de consultores premium agora mesmo. ";
+              if (!aiText) aiText = "Obrigado por esses detalhes. Estou atualizando nossa equipe de consultores premium agora mesmo. ";
               pushToCRM(updatedLead).then(success => {
                 if (success) {
                   console.log("CRM Sync complete");
                 }
               });
 
-              aiText += "Registrei suas preferências. Gostaria de agendar uma visita para um de nossos imóveis agora?";
+              if (aiText.includes("Obrigado por esses detalhes")) {
+                aiText = "Registrei suas preferências. Como posso ajudar mais?";
+              }
             } else {
-              aiText = "Eu tenho suas preferências, mas ainda preciso do seu nome e e-mail para salvá-las corretamente. Poderia informá-los primeiro?";
+              if (!aiText) aiText = "Eu tenho suas preferências, mas ainda preciso do seu nome e e-mail para salvá-las corretamente. Poderia informá-los primeiro?";
             }
           }
           
@@ -155,11 +156,11 @@ export function AgentChat({ initialProperty, onClose }: AgentChatProps) {
               // Trigger auto-reminder
               await createAutoReminder(updatedLead, LeadStatus.VIEWING_SCHEDULED, [], viewingData);
 
-              aiText = `Solicitei com sucesso uma visita para você em ${new Date(dateTime).toLocaleString('pt-BR')}. Nossa equipe confirmará em breve. Deseja algo mais?`;
+              if (!aiText) aiText = `Solicitei com sucesso uma visita para você em ${new Date(dateTime).toLocaleString('pt-BR')}. Nossa equipe confirmará em breve. Deseja algo mais?`;
             } else if (!lead.id) {
-              aiText = "Eu adoraria agendar essa visita para você, mas preciso de suas informações de contato primeiro. Poderia fornecer seu nome e e-mail?";
+              if (!aiText) aiText = "Eu adoraria agendar essa visita para você, mas preciso de suas informações de contato primeiro. Poderia fornecer seu nome e e-mail?";
             } else {
-              aiText = "Qual imóvel você gostaria de visitar? Não vejo nenhum selecionado em nossa conversa atual.";
+              if (!aiText) aiText = "Qual imóvel você gostaria de visitar? Não vejo nenhum selecionado em nossa conversa atual.";
             }
           }
 
@@ -173,13 +174,15 @@ export function AgentChat({ initialProperty, onClose }: AgentChatProps) {
                 completed: false,
                 createdAt: serverTimestamp()
               }).catch(e => handleFirestoreError(e, OperationType.CREATE, 'reminders'));
-              aiText = `Entendido. Defini um lembrete de acompanhamento para nossa equipe entrar em contato com você sobre "${text}" em ${new Date(dateTime).toLocaleString('pt-BR')}.`;
+              if (!aiText) aiText = `Entendido. Defini um lembrete de acompanhamento para nossa equipe entrar em contato com você sobre "${text}" em ${new Date(dateTime).toLocaleString('pt-BR')}.`;
             } else {
-              aiText = "Gostaria de configurar esse acompanhamento para você, mas preciso do seu nome e e-mail primeiro. Poderia fornecê-los?";
+              if (!aiText) aiText = "Gostaria de configurar esse acompanhamento para você, mas preciso do seu nome e e-mail primeiro. Poderia fornecê-los?";
             }
           }
         }
       }
+
+      if (!aiText) aiText = "Entendido. Como posso ajudar você agora?";
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
