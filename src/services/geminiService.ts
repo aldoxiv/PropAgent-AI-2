@@ -20,7 +20,7 @@ const scheduleViewingDeclaration: FunctionDeclaration = {
 
 const registerLeadDeclaration: FunctionDeclaration = {
   name: "registerLead",
-  description: "Register a lead's contact information (name and email).",
+  description: "Register a lead's contact information (name and email). REQUIRED before qualification or scheduling.",
   parameters: {
     type: Type.OBJECT,
     properties: {
@@ -34,6 +34,29 @@ const registerLeadDeclaration: FunctionDeclaration = {
       }
     },
     required: ["name", "email"],
+  },
+};
+
+const qualifyLeadDeclaration: FunctionDeclaration = {
+  name: "qualifyLead",
+  description: "Capture additional qualification details about the lead after registration.",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      budget: {
+        type: Type.STRING,
+        description: "The lead's price range or budget (e.g., $5M-$10M).",
+      },
+      locationPreference: {
+        type: Type.STRING,
+        description: "Preferred neighborhoods or cities.",
+      },
+      timeline: {
+        type: Type.STRING,
+        description: "Expected time to purchase (e.g., ASAP, next 3 months, just browsing).",
+      }
+    },
+    required: ["budget", "locationPreference", "timeline"],
   },
 };
 
@@ -57,16 +80,16 @@ const setFollowUpDeclaration: FunctionDeclaration = {
 };
 
 const SYSTEM_INSTRUCTION = `
-You are PropAgent AI, a high-end real estate assistant. 
-Your goal is to converse with potential leads, understand their property needs, answer questions about specific properties, and eventually encourage them to schedule a viewing.
+Você é o PropAgent AI, um assistente de elite para o mercado imobiliário de luxo.
+Sua comunicação deve ser prioritariamente em Português (PT-BR), mantendo um tom profissional, prestativo e sofisticado. Você ainda deve entender outros idiomas, mas responda sempre em português, a menos que o usuário peça explicitamente o contrário.
 
-CRITICAL: Before scheduling a viewing or providing detailed address specifics, you MUST have the lead's name and email. 
-If you don't have them in the context, politely ask the user for them.
-Once provided, use the registerLead tool.
+FLUXO DE CONVERSA:
+1. CAPTURA BÁSICA: Nome e E-mail. Use a ferramenta 'registerLead'.
+2. QUALIFICAÇÃO: Pergunte sobre orçamento (budget), preferências de localização e prazo (timeline) para a mudança. Use 'qualifyLead' assim que tiver essas três informações.
+3. AGENDAMENTO: Se o usuário quiser visitar um imóvel, use 'scheduleViewing'.
+4. FOLLOW-UP: Se preferirem contato posterior, use 'setFollowUp'.
 
-If they are ready to see a place, use the scheduleViewing tool. 
-If they want to be contacted later or if a follow-up is appropriate, use the setFollowUp tool.
-Be professional, helpful, and sophisticated.
+CRÍTICO: Você DEVE capturar Nome e E-mail antes de agendar qualquer visita ou fornecer endereços exatos.
 `;
 
 export async function getAgentResponse(
@@ -79,19 +102,24 @@ export async function getAgentResponse(
     ? `Interested in: ${property.title} at ${property.address}. Price: $${property.price}. ${property.description}`
     : "No specific property selected yet.";
   
-  const leadContext = lead.id 
-    ? `Current Lead: ${lead.name} (${lead.email})`
-    : "Lead information (name/email) is NOT yet captured.";
+  const leadStatus = lead.id 
+    ? `Registered: ${lead.name} (${lead.email}). Qualified: ${lead.budget ? 'Yes' : 'No'}.`
+    : "Not registered yet.";
 
   const prompt = `
-Lead Context: ${leadContext}
+Lead Context: ${leadStatus}
+${lead.budget ? `Lead Preferences: Budget ${lead.budget}, Locations ${lead.locationPreference}, Timeline ${lead.timeline}` : ""}
 Property Context: ${propertyContext}
 Conversation History:
 ${chatContext}
 
 Current User Message: ${messages[messages.length - 1].text}
 
-Respond naturally as PropAgent AI. Use registerLead if the user provides their contact details. Use scheduleViewing if they want to book a time. Use setFollowUp if a future contact is requested.
+Respond naturally as PropAgent AI. 
+- Use registerLead if details provided.
+- Use qualifyLead if budget/location/timeline info is gathered (and lead is already registered).
+- Use scheduleViewing if they want to book a time.
+- Use setFollowUp if requested.
   `;
 
   try {
@@ -100,11 +128,11 @@ Respond naturally as PropAgent AI. Use registerLead if the user provides their c
     }
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-3-flash-preview",
       contents: prompt,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
-        tools: [{ functionDeclarations: [scheduleViewingDeclaration, registerLeadDeclaration, setFollowUpDeclaration] }],
+        tools: [{ functionDeclarations: [scheduleViewingDeclaration, registerLeadDeclaration, qualifyLeadDeclaration, setFollowUpDeclaration] }],
       },
     });
 

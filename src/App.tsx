@@ -140,7 +140,7 @@ export default function App() {
             onClick={() => setView('public')}
             className={`text-[11px] uppercase tracking-widest font-bold transition-all ${view === 'public' ? 'text-[var(--color-gold)]' : 'text-[rgba(26,26,26,0.5)] hover:text-[rgba(26,26,26,1)]'}`}
           >
-            Listings
+            Imóveis
           </button>
           <button 
             onClick={toggleAdminView}
@@ -151,7 +151,7 @@ export default function App() {
             }`}
           >
             <ShieldCheck size={14} />
-            Agent Portal
+            Portal do Agente
           </button>
           
           {user ? (
@@ -160,7 +160,7 @@ export default function App() {
               className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] font-bold text-red-500/60 hover:text-red-500 transition-colors"
             >
               <LogOut size={14} />
-              Sign Out
+              Sair
             </button>
           ) : (
             <button 
@@ -168,7 +168,7 @@ export default function App() {
               className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] font-bold text-[var(--color-gold)] hover:text-[var(--color-ink)] transition-colors"
             >
               <LogIn size={14} />
-              Admin sign in
+              Entrar Admin
             </button>
           )}
         </div>
@@ -189,11 +189,11 @@ export default function App() {
               <section className="px-8 pt-16 pb-12">
                 <div className="max-w-4xl">
                   <h2 className="font-serif text-7xl mb-6 leading-[0.9] tracking-tighter">
-                    Finding the perfect <br /> 
-                    <span className="text-[var(--color-gold)] italic">residence</span> for you.
+                    Encontrando a sua <br /> 
+                    <span className="text-[var(--color-gold)] italic">residência</span> perfeita.
                   </h2>
                   <p className="max-w-xl text-[rgba(26,26,26,0.6)] font-sans leading-relaxed">
-                    Our AI-powered assistant is here 24/7 to help you discover exclusive properties and handle every detail from inquiry to viewing.
+                    Nosso assistente com IA está aqui 24/7 para ajudar você a descobrir propriedades exclusivas e cuidar de cada detalhe, desde a consulta até a visita.
                   </p>
                 </div>
               </section>
@@ -202,13 +202,13 @@ export default function App() {
               <section className="px-2 pb-24">
                 {properties.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-20 gap-6">
-                    <p className="text-[11px] uppercase tracking-widest opacity-50 font-bold">Your listing collection is empty</p>
+                    <p className="text-[11px] uppercase tracking-widest opacity-50 font-bold">Sua coleção de imóveis está vazia</p>
                     <button 
                       onClick={seedData} 
                       disabled={isSeeding}
                       className="px-8 py-4 bg-[var(--color-ink)] text-white text-[11px] uppercase tracking-widest font-bold rounded-sm hover:translate-y-[-2px] transition-all flex items-center gap-3 disabled:opacity-50"
                     >
-                      {isSeeding ? 'Provisioning...' : 'Seed Initial Inventory'}
+                      {isSeeding ? 'Provisionando...' : 'Carregar Inventário Inicial'}
                       {!isSeeding && <ArrowRight size={14} />}
                     </button>
                   </div>

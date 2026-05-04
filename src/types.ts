@@ -30,8 +30,12 @@ export interface Lead {
   phone?: string;
   propertyId?: string;
   status: LeadStatus;
-  createdAt: number;
-  lastActive: number;
+  createdAt: any; // Using any for serverTimestamp compatibility
+  lastActive: any;
+  budget?: string;
+  locationPreference?: string;
+  timeline?: string;
+  crmSynced?: boolean;
 }
 
 export interface Message {

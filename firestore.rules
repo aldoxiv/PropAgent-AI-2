@@ -32,14 +32,25 @@ service cloud.firestore {
 
     function isValidLead(data) {
       return data.keys().hasAll(['name', 'email', 'status', 'createdAt', 'lastActive'])
-        && data.keys().hasOnly(['name', 'email', 'phone', 'propertyId', 'status', 'createdAt', 'lastActive'])
+        && data.keys().hasOnly(['name', 'email', 'phone', 'propertyId', 'status', 'createdAt', 'lastActive', 'budget', 'locationPreference', 'timeline', 'crmSynced'])
         && data.name is string && data.name.size() >= 2 && data.name.size() <= 100
         && data.email is string && data.email.size() >= 5 && data.email.size() <= 100
         && (data.get('phone', '') == '' || (data.phone is string && data.phone.size() <= 20))
         && (data.get('propertyId', null) == null || (data.propertyId is string && isValidId(data.propertyId)))
         && data.status in ['new', 'contacted', 'interested', 'viewing_scheduled', 'viewing_completed', 'closed']
-        && data.createdAt == request.time
+        && (data.get('budget', '') == '' || data.budget is string)
+        && (data.get('locationPreference', '') == '' || data.locationPreference is string)
+        && (data.get('timeline', '') == '' || data.timeline is string)
+        && (data.get('crmSynced', false) == false || data.crmSynced is bool)
         && data.lastActive == request.time;
+    }
+
+    function isValidLeadCreate(data) {
+      return isValidLead(data) && data.createdAt == request.time;
+    }
+
+    function isValidLeadUpdate(data) {
+      return isValidLead(data) && data.createdAt == existing().createdAt;
     }
 
     function isValidMessage(data) {
@@ -92,12 +103,15 @@ service cloud.firestore {
     // 2. Leads
     match /leads/{leadId} {
       // Public can create a lead
-      allow create: if isValidLead(incoming()) && isValidId(leadId);
+      allow create: if isValidLeadCreate(incoming()) && isValidId(leadId);
       // Admin can manage everything
       allow get: if isAdmin();
       allow list: if isAdmin();
-      allow update: if isAdmin() && isValidLead(incoming()) && (
-        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'lastActive', 'name', 'email', 'phone', 'propertyId'])
+      allow update: if (isAdmin() && isValidLeadUpdate(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'lastActive', 'name', 'email', 'phone', 'propertyId', 'budget', 'locationPreference', 'timeline', 'crmSynced'])
+      )) || (
+        // Public can update their own lead's qualification info during chat
+        isValidLeadUpdate(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['budget', 'locationPreference', 'timeline', 'lastActive', 'crmSynced'])
       );
       allow delete: if isAdmin();
 

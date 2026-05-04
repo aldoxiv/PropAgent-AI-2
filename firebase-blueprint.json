@@ -25,7 +25,11 @@
         "propertyId": { "type": "string" },
         "status": { "type": "string", "enum": ["new", "contacted", "interested", "viewing_scheduled", "viewing_completed", "closed"] },
         "createdAt": { "type": "string", "format": "date-time" },
-        "lastActive": { "type": "string", "format": "date-time" }
+        "lastActive": { "type": "string", "format": "date-time" },
+        "budget": { "type": "string" },
+        "locationPreference": { "type": "string" },
+        "timeline": { "type": "string" },
+        "crmSynced": { "type": "boolean" }
       },
       "required": ["name", "email", "status", "createdAt"]
     },

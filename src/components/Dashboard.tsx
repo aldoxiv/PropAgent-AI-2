@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { Lead, Viewing, LeadStatus, ViewingStatus, Property, Reminder, AppSettings } from "../types";
 import { db, handleFirestoreError, OperationType } from "../lib/firebase";
 import { collection, query, onSnapshot, updateDoc, doc, deleteDoc, getDocs, addDoc, serverTimestamp, setDoc } from "firebase/firestore";
-import { Users, Calendar, CheckCircle2, XCircle, ChevronRight, LayoutDashboard, Building2, Bell, Clock, AlertCircle, Search, Settings, Save } from "lucide-react";
+import { Users, Calendar, CheckCircle2, XCircle, ChevronRight, LayoutDashboard, Building2, Bell, Clock, AlertCircle, Search, Settings, Save, Briefcase } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { LeadCRMForm } from "./LeadCRMForm";
 
 export function Dashboard({ properties }: { properties: Property[] }) {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -13,6 +14,7 @@ export function Dashboard({ properties }: { properties: Property[] }) {
   const [activeTab, setActiveTab] = useState<'leads' | 'viewings' | 'inventory' | 'reminders' | 'settings'>('leads');
   const [searchQuery, setSearchQuery] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
   useEffect(() => {
     const leadsUnsub = onSnapshot(collection(db, 'leads'), (snapshot) => {
@@ -103,17 +105,17 @@ export function Dashboard({ properties }: { properties: Property[] }) {
                 onClick={() => setActiveTab('reminders')}
               >
                 <AlertCircle size={16} />
-                <span className="text-[10px] font-bold uppercase tracking-widest">{overdueReminders.length} Overdue</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest">{overdueReminders.length} Pendentes</span>
               </motion.div>
             )}
             <div className="text-right">
               <p className="text-xs font-semibold">{leads.length}</p>
-              <p className="text-[9px] uppercase tracking-widest text-[rgba(26,26,26,0.5)]">Total Leads</p>
+              <p className="text-[9px] uppercase tracking-widest text-[rgba(26,26,26,0.5)]">Total de Leads</p>
             </div>
             <div className="w-px h-8 bg-[rgba(26,26,26,0.1)]" />
             <div className="text-right">
               <p className="text-xs font-semibold">{viewings.filter(v => v.status === ViewingStatus.PENDING).length}</p>
-              <p className="text-[9px] uppercase tracking-widest text-[rgba(26,26,26,0.5)]">Pending Viewings</p>
+              <p className="text-[9px] uppercase tracking-widest text-[rgba(26,26,26,0.5)]">Visitas Pendentes</p>
             </div>
           </div>
         </div>
@@ -121,10 +123,10 @@ export function Dashboard({ properties }: { properties: Property[] }) {
         <div className="flex gap-8">
           {[
             { id: 'leads', icon: Users, label: 'Leads' },
-            { id: 'viewings', icon: Calendar, label: 'Viewings' },
+            { id: 'viewings', icon: Calendar, label: 'Visitas' },
             { id: 'reminders', icon: Clock, label: 'Follow-ups' },
-            { id: 'inventory', icon: Building2, label: 'Inventory' },
-            { id: 'settings', icon: Settings, label: 'Templates' },
+            { id: 'inventory', icon: Building2, label: 'Inventário' },
+            { id: 'settings', icon: Settings, label: 'Configurações' },
           ].map((tab) => (
             <div key={tab.id} className="relative">
               <button
@@ -159,14 +161,14 @@ export function Dashboard({ properties }: { properties: Property[] }) {
             >
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                 <div>
-                  <h3 className="font-serif text-2xl tracking-tight">Lead Manifest</h3>
-                  <p className="text-[10px] uppercase tracking-widest text-[rgba(26,26,26,0.4)]">Capture & Follow-up Pipeline</p>
+                  <h3 className="font-serif text-2xl tracking-tight">Manifesto de Leads</h3>
+                  <p className="text-[10px] uppercase tracking-widest text-[rgba(26,26,26,0.4)]">Pipeline de Captura e Qualificação</p>
                 </div>
                 <div className="relative w-full md:w-72">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgba(26,26,26,0.3)]" size={16} />
                   <input
                     type="text"
-                    placeholder="Search name or email..."
+                    placeholder="Buscar nome ou email..."
                     className="w-full pl-10 pr-4 py-2 bg-white border border-[rgba(26,26,26,0.1)] rounded-sm text-sm outline-none focus:border-[var(--color-gold)] transition-colors"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -199,7 +201,39 @@ export function Dashboard({ properties }: { properties: Property[] }) {
                         <span>{lead.email}</span>
                         <span className="w-1 h-1 bg-[rgba(26,26,26,0.2)] rounded-full" />
                         <span>Status: <span className="text-[var(--color-gold)] font-bold">{lead.status}</span></span>
+                        {lead.crmSynced && (
+                          <>
+                            <span className="w-1 h-1 bg-[rgba(26,26,26,0.2)] rounded-full" />
+                            <span className="flex items-center gap-1 text-green-600 font-bold">
+                              <CheckCircle2 size={10} />
+                              CRM Sync
+                            </span>
+                          </>
+                        )}
                       </div>
+                      
+                      {(lead.budget || lead.locationPreference || lead.timeline) && (
+                        <div className="mt-2 flex gap-4">
+                          {lead.budget && (
+                            <div className="flex flex-col">
+                              <span className="text-[8px] uppercase tracking-tighter opacity-40 font-bold">Budget</span>
+                              <span className="text-[10px] font-medium">{lead.budget}</span>
+                            </div>
+                          )}
+                          {lead.locationPreference && (
+                            <div className="flex flex-col">
+                              <span className="text-[8px] uppercase tracking-tighter opacity-40 font-bold">Locations</span>
+                              <span className="text-[10px] font-medium">{lead.locationPreference}</span>
+                            </div>
+                          )}
+                          {lead.timeline && (
+                            <div className="flex flex-col">
+                              <span className="text-[8px] uppercase tracking-tighter opacity-40 font-bold">Timeline</span>
+                              <span className="text-[10px] font-medium">{lead.timeline}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -215,9 +249,16 @@ export function Dashboard({ properties }: { properties: Property[] }) {
                       className="flex items-center gap-2 p-2 hover:bg-[var(--color-paper)] rounded transition-colors text-[9px] uppercase tracking-widest font-bold opacity-60"
                     >
                       <Clock size={14} />
-                      Log Follow-up
+                      Follow-up
                     </button>
-                    <button className="p-2 hover:bg-[var(--color-paper)] rounded transition-colors">
+                    <button 
+                      onClick={() => setSelectedLead(lead)}
+                      className="flex items-center gap-2 p-2 hover:bg-[var(--color-gold)] hover:text-white rounded transition-colors text-[9px] uppercase tracking-widest font-bold border border-[var(--color-gold)] text-[var(--color-gold)]"
+                    >
+                      <Briefcase size={14} />
+                      CRM
+                    </button>
+                    <button className="p-2 hover:bg-[var(--color-paper)] rounded transition-colors" onClick={() => setSelectedLead(lead)}>
                       <ChevronRight size={18} />
                     </button>
                   </div>
@@ -386,6 +427,16 @@ export function Dashboard({ properties }: { properties: Property[] }) {
           )}
         </AnimatePresence>
       </div>
+
+      <AnimatePresence>
+        {selectedLead && (
+          <LeadCRMForm 
+            lead={selectedLead} 
+            onClose={() => setSelectedLead(null)} 
+            viewings={viewings}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

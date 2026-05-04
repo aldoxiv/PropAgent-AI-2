@@ -5,6 +5,8 @@ import { Send, X, Bot, User, Calendar, Loader2 } from "lucide-react";
 import { getAgentResponse } from "../services/geminiService";
 import { db, handleFirestoreError, OperationType } from "../lib/firebase";
 import { collection, addDoc, serverTimestamp, updateDoc, doc, getDoc } from "firebase/firestore";
+import { pushToCRM } from "../services/crmService";
+import { createAutoReminder } from "../services/reminderService";
 
 interface AgentChatProps {
   initialProperty?: Property;
@@ -16,8 +18,8 @@ export function AgentChat({ initialProperty, onClose }: AgentChatProps) {
     {
       id: "1",
       text: initialProperty 
-        ? `Hello! I see you're interested in ${initialProperty.title}. I'm PropAgent AI, how can I help you regarding this property?` 
-        : "Hello! I'm PropAgent AI. Are you looking for a new home or investing in property?",
+        ? `Olá! Vejo que você está interessado em ${initialProperty.title}. Eu sou o PropAgent AI, como posso ajudar você com este imóvel?` 
+        : "Olá! Eu sou o PropAgent AI. Você está procurando um novo lar ou investindo em propriedades?",
       sender: "agent",
       timestamp: Date.now(),
     },
@@ -51,7 +53,7 @@ export function AgentChat({ initialProperty, onClose }: AgentChatProps) {
       // Get AI response
       const result = await getAgentResponse(messages.concat(userMessage), lead, initialProperty);
       
-      let aiText = result.text || "I'm processing that for you.";
+      let aiText = result.text || "Estou processando isso para você.";
       
       if (result.functionCalls) {
         for (const call of result.functionCalls) {
@@ -92,25 +94,72 @@ export function AgentChat({ initialProperty, onClose }: AgentChatProps) {
               console.error("Failed to fetch settings for welcome email", e);
             }
 
-            aiText = `Thank you, ${name}. I've registered your interest and sent a welcome email to ${email}. How can I help you further?`;
+            aiText = `Obrigado, ${name}. Registrei seu interesse e enviei um e-mail de boas-vindas para ${email}. Como posso ajudar mais?`;
+          }
+
+          if (call.name === 'qualifyLead') {
+            const { budget, locationPreference, timeline } = call.args as { budget: string; locationPreference: string; timeline: string };
+            if (lead.id) {
+              const qualificationData = {
+                budget,
+                locationPreference,
+                timeline,
+                status: LeadStatus.INTERESTED,
+                lastActive: serverTimestamp()
+              };
+              
+              await updateDoc(doc(db, 'leads', lead.id), qualificationData)
+                .catch(e => handleFirestoreError(e, OperationType.UPDATE, `leads/${lead.id}`));
+              
+              const updatedLead = { ...lead, ...qualificationData } as Lead;
+              setLead(updatedLead);
+              
+              // Trigger auto-reminder
+              await createAutoReminder(updatedLead, LeadStatus.INTERESTED);
+              
+              // Push to CRM after qualification
+              aiText = "Obrigado por esses detalhes. Estou atualizando nossa equipe de consultores premium agora mesmo. ";
+              pushToCRM(updatedLead).then(success => {
+                if (success) {
+                  console.log("CRM Sync complete");
+                }
+              });
+
+              aiText += "Registrei suas preferências. Gostaria de agendar uma visita para um de nossos imóveis agora?";
+            } else {
+              aiText = "Eu tenho suas preferências, mas ainda preciso do seu nome e e-mail para salvá-las corretamente. Poderia informá-los primeiro?";
+            }
           }
           
           if (call.name === 'scheduleViewing') {
             const { dateTime } = call.args as { dateTime: string };
             // Auto schedule in Firebase
             if (lead.id && (initialProperty?.id || lead.propertyId)) {
-              await addDoc(collection(db, 'viewings'), {
+              const viewingData = {
                 leadId: lead.id,
                 propertyId: initialProperty?.id || lead.propertyId,
                 dateTime: new Date(dateTime).getTime(),
                 status: ViewingStatus.PENDING,
                 createdAt: serverTimestamp()
-              }).catch(e => handleFirestoreError(e, OperationType.CREATE, 'viewings'));
-              aiText = `I've successfully requested a viewing for you on ${new Date(dateTime).toLocaleString()}. Our team will confirm this shortly. Is there anything else?`;
+              };
+              
+              await addDoc(collection(db, 'viewings'), viewingData).catch(e => handleFirestoreError(e, OperationType.CREATE, 'viewings'));
+              
+              // Update lead status
+              await updateDoc(doc(db, 'leads', lead.id), { status: LeadStatus.VIEWING_SCHEDULED, lastActive: serverTimestamp() })
+                .catch(e => handleFirestoreError(e, OperationType.UPDATE, `leads/${lead.id}`));
+              
+              const updatedLead = { ...lead, status: LeadStatus.VIEWING_SCHEDULED } as Lead;
+              setLead(updatedLead);
+
+              // Trigger auto-reminder
+              await createAutoReminder(updatedLead, LeadStatus.VIEWING_SCHEDULED, [], viewingData);
+
+              aiText = `Solicitei com sucesso uma visita para você em ${new Date(dateTime).toLocaleString('pt-BR')}. Nossa equipe confirmará em breve. Deseja algo mais?`;
             } else if (!lead.id) {
-              aiText = "I'd love to schedule that viewing for you, but I need your contact information first. Could you please provide your name and email?";
+              aiText = "Eu adoraria agendar essa visita para você, mas preciso de suas informações de contato primeiro. Poderia fornecer seu nome e e-mail?";
             } else {
-              aiText = "Which property would you like to view? I don't see one selected in our current conversation.";
+              aiText = "Qual imóvel você gostaria de visitar? Não vejo nenhum selecionado em nossa conversa atual.";
             }
           }
 
@@ -124,9 +173,9 @@ export function AgentChat({ initialProperty, onClose }: AgentChatProps) {
                 completed: false,
                 createdAt: serverTimestamp()
               }).catch(e => handleFirestoreError(e, OperationType.CREATE, 'reminders'));
-              aiText = `Understood. I've set a follow-up reminder for our team to contact you regarding "${text}" on ${new Date(dateTime).toLocaleString()}.`;
+              aiText = `Entendido. Defini um lembrete de acompanhamento para nossa equipe entrar em contato com você sobre "${text}" em ${new Date(dateTime).toLocaleString('pt-BR')}.`;
             } else {
-              aiText = "I'd like to set that follow-up for you, but I need your name and email first. Could you provide those?";
+              aiText = "Gostaria de configurar esse acompanhamento para você, mas preciso do seu nome e e-mail primeiro. Poderia fornecê-los?";
             }
           }
         }
@@ -162,7 +211,7 @@ export function AgentChat({ initialProperty, onClose }: AgentChatProps) {
           </div>
           <div>
             <h3 className="font-serif text-xl leading-none">PropAgent AI</h3>
-            <span className="text-[10px] uppercase tracking-widest opacity-60">Personal Assistant</span>
+            <span className="text-[10px] uppercase tracking-widest opacity-60">Assistente Pessoal</span>
           </div>
         </div>
         <button onClick={onClose} className="opacity-60 hover:opacity-100 transition-opacity">
@@ -200,7 +249,7 @@ export function AgentChat({ initialProperty, onClose }: AgentChatProps) {
           <div className="flex justify-start">
             <div className="bg-white p-4 rounded-2xl shadow-sm italic text-xs text-[rgba(26,26,26,0.5)] flex items-center gap-2">
               <Loader2 size={14} className="animate-spin" />
-              Thinking...
+              Pensando...
             </div>
           </div>
         )}
@@ -211,7 +260,7 @@ export function AgentChat({ initialProperty, onClose }: AgentChatProps) {
         <div className="flex gap-2">
           <input
             type="text"
-            placeholder="Type a message..."
+            placeholder="Digite uma mensagem..."
             className="flex-1 bg-transparent border-none outline-none text-sm font-sans"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
