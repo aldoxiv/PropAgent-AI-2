@@ -2,9 +2,11 @@
 
 An intelligent real estate assistant that captures leads, automates follow-ups, and manages viewing schedules.
 
+![PropAgent AI Hero](https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&q=80&w=1000)
+
 ## 🚀 Live Demo
 
-[View the application here](https://ais-pre-mwfuktfgr67ugsz4vkvbje-247310967660.us-east5.run.app)
+[View the application here](https://ais-dev-mwfuktfgr67ugsz4vkvbje-247310967660.us-east5.run.app)
 
 ---
 
