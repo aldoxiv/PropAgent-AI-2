@@ -79,8 +79,15 @@ service cloud.firestore {
         && isValidId(data.leadId)
         && data.text is string && data.text.size() > 0 && data.text.size() <= 1000
         && data.dateTime is number && data.dateTime > 0
-        && data.completed is bool
-        && data.createdAt == request.time;
+        && data.completed is bool;
+    }
+
+    function isValidReminderCreate(data) {
+      return isValidReminder(data) && data.createdAt == request.time;
+    }
+
+    function isValidReminderUpdate(data) {
+      return isValidReminder(data) && data.createdAt == existing().createdAt;
     }
 
     function isValidSettings(data) {
@@ -138,11 +145,10 @@ service cloud.firestore {
 
     // 4. Reminders
     match /reminders/{reminderId} {
-      // Public create reminder (AI bot triggered from client maybe?)
-      // Actually usually admin creates reminders for themselves.
-      allow create: if isAdmin() && isValidReminder(incoming()) && isValidId(reminderId);
+      // Public create reminder (AI bot triggered from client)
+      allow create: if isValidReminderCreate(incoming()) && isValidId(reminderId);
       allow read: if isAdmin();
-      allow update: if isAdmin() && isValidReminder(incoming()) && (
+      allow update: if isAdmin() && isValidReminderUpdate(incoming()) && (
         incoming().diff(existing()).affectedKeys().hasOnly(['completed', 'text', 'dateTime'])
       );
       allow delete: if isAdmin();
