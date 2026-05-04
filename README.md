@@ -1,20 +1,13 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# PropAgent AI - CRM & LLM Integration
 
-# Run and deploy your AI Studio app
+**Descrição:** Desenvolvimento de protótipos de CRM integrados a modelos de LLM (Gemini via Google AI Studio) para automação da qualificação de leads imobiliários.
 
-This contains everything you need to run your app locally.
+**Destaque técnico:** Uso de Python para integração de APIs e engenharia de prompt para classificação de perfil de investidor vs. comprador final.
 
-View your app in AI Studio: https://ai.studio/apps/631f10df-53b8-4110-9bf5-8d05338f958e
+## Funcionalidades
 
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+- **Chatbase AI (Gemini):** Qualificação automática de leads em tempo real.
+- **Portal do Agente:** Dashboard completo para gestão de leads e visitas.
+- **Formulário CRM:** Acompanhamento detalhado do processo de vendas.
+- **Lembretes Automáticos:** Geração de follow-ups baseada no status do lead.
+- **Sincronização CRM:** Simulação de integração com sistemas externos.
