@@ -1,0 +1,10 @@
+{
+  "name": "Remix: PropAgent AI",
+  "description": "An intelligent real estate assistant that captures leads, automates follow-ups, and manages viewing schedules.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "AI Conversations",
+    "Lead Management",
+    "Automated Scheduling"
+  ]
+}

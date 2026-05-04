@@ -1,0 +1,104 @@
+{
+  "entities": {
+    "Property": {
+      "title": "Property",
+      "description": "A real estate listing",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "address": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "type": { "type": "string", "enum": ["apartment", "house", "condo"] }
+      },
+      "required": ["title", "price", "address"]
+    },
+    "Lead": {
+      "title": "Lead",
+      "description": "A potential property buyer or renter",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "propertyId": { "type": "string" },
+        "status": { "type": "string", "enum": ["new", "contacted", "interested", "viewing_scheduled", "viewing_completed", "closed"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "lastActive": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "status", "createdAt"]
+    },
+    "Viewing": {
+      "title": "Viewing",
+      "description": "A scheduled property viewing",
+      "type": "object",
+      "properties": {
+        "leadId": { "type": "string" },
+        "propertyId": { "type": "string" },
+        "dateTime": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "cancelled"] }
+      },
+      "required": ["leadId", "propertyId", "dateTime", "status"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A message in a lead conversation",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "sender": { "type": "string", "enum": ["user", "agent"] },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["text", "sender", "timestamp"]
+    },
+    "Reminder": {
+      "title": "Reminder",
+      "description": "A follow-up reminder for a lead",
+      "type": "object",
+      "properties": {
+        "leadId": { "type": "string" },
+        "text": { "type": "string" },
+        "dateTime": { "type": "string", "format": "date-time" },
+        "completed": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["leadId", "text", "dateTime", "completed", "createdAt"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Application configuration settings",
+      "type": "object",
+      "properties": {
+        "welcomeEmailSubject": { "type": "string" },
+        "welcomeEmailBody": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/properties/{propertyId}": {
+      "schema": "Property",
+      "description": "Collection of all available properties"
+    },
+    "/settings/{settingId}": {
+      "schema": "Settings",
+      "description": "Global application settings"
+    },
+    "/leads/{leadId}": {
+      "schema": "Lead",
+      "description": "Collection of leads with their contact info and status"
+    },
+    "/leads/{leadId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Subcollection of messages for a specific lead"
+    },
+    "/viewings/{viewingId}": {
+      "schema": "Viewing",
+      "description": "Collection of scheduled viewings"
+    },
+    "/reminders/{reminderId}": {
+      "schema": "Reminder",
+      "description": "Collection of follow-up reminders"
+    }
+  }
+}
