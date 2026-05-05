@@ -3,7 +3,8 @@ import { Lead, Viewing, LeadStatus, ViewingStatus } from "../types";
 import { db, handleFirestoreError, OperationType } from "../lib/firebase";
 import { updateDoc, doc, serverTimestamp } from "firebase/firestore";
 import { createAutoReminder } from "../services/reminderService";
-import { X, Save, Clock, MapPin, DollarSign, Calendar, MessageSquare, CheckCircle2 } from "lucide-react";
+import { updateLeadScore } from "../services/scoringService";
+import { X, Save, Clock, MapPin, DollarSign, Calendar, MessageSquare, CheckCircle2, TrendingUp } from "lucide-react";
 import { motion } from "motion/react";
 
 interface LeadCRMFormProps {
@@ -22,11 +23,14 @@ export function LeadCRMForm({ lead, onClose, viewings }: LeadCRMFormProps) {
     setIsSaving(true);
     try {
       const hasStatusChanged = status !== lead.status;
+      const updatedLead = { ...lead, status };
       
       await updateDoc(doc(db, 'leads', lead.id), {
         status,
         lastActive: serverTimestamp()
       });
+
+      await updateLeadScore(updatedLead);
 
       if (hasStatusChanged) {
         await createAutoReminder({ ...lead, status }, status, viewings);
@@ -96,7 +100,15 @@ export function LeadCRMForm({ lead, onClose, viewings }: LeadCRMFormProps) {
             </div>
 
             {/* Qualification Data */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
+              <div className="p-4 bg-gray-50 rounded-sm border border-gray-100 relative overflow-hidden">
+                <div className="flex items-center gap-2 mb-2 text-[var(--color-gold)]">
+                  <TrendingUp size={14} />
+                  <span className="text-[10px] uppercase tracking-widest font-bold">Priority Score</span>
+                </div>
+                <p className="text-2xl font-serif text-[var(--color-ink)]">{lead.score || 0}</p>
+                <div className="absolute bottom-0 left-0 h-1 bg-[var(--color-gold)]" style={{ width: `${lead.score || 0}%` }} />
+              </div>
               <div className="p-4 bg-gray-50 rounded-sm border border-gray-100">
                 <div className="flex items-center gap-2 mb-2 text-[var(--color-gold)]">
                   <DollarSign size={14} />

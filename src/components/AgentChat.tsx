@@ -7,6 +7,7 @@ import { db, handleFirestoreError, OperationType } from "../lib/firebase";
 import { collection, addDoc, serverTimestamp, updateDoc, doc, getDoc } from "firebase/firestore";
 import { pushToCRM } from "../services/crmService";
 import { createAutoReminder } from "../services/reminderService";
+import { updateLeadScore } from "../services/scoringService";
 
 interface AgentChatProps {
   initialProperty?: Property;
@@ -71,6 +72,7 @@ export function AgentChat({ initialProperty, onClose }: AgentChatProps) {
             if (!leadRef) return;
             const newLead = { ...leadData, id: leadRef.id } as any;
             setLead(newLead);
+            await updateLeadScore(newLead);
             
             // Trigger Welcome Email (Simulation)
             try {
@@ -114,6 +116,7 @@ export function AgentChat({ initialProperty, onClose }: AgentChatProps) {
               const updatedLead = { ...lead, ...qualificationData } as Lead;
               setLead(updatedLead);
               
+              await updateLeadScore(updatedLead);
               await createAutoReminder(updatedLead, LeadStatus.INTERESTED);
               
               // Push to CRM after qualification
@@ -153,6 +156,7 @@ export function AgentChat({ initialProperty, onClose }: AgentChatProps) {
               const updatedLead = { ...lead, status: LeadStatus.VIEWING_SCHEDULED } as Lead;
               setLead(updatedLead);
 
+              await updateLeadScore(updatedLead);
               // Trigger auto-reminder
               await createAutoReminder(updatedLead, LeadStatus.VIEWING_SCHEDULED, [], viewingData);
 

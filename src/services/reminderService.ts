@@ -38,6 +38,12 @@ export async function createAutoReminder(lead: Lead, newStatus: LeadStatus, view
       }
       break;
 
+    case LeadStatus.VIEWING_COMPLETED:
+      reminderText = `Follow-up Pós-Visita: Coletar feedback do cliente sobre o imóvel visitado.`;
+      // 1 day from now
+      reminderDate = Date.now() + (1 * 24 * 60 * 60 * 1000);
+      break;
+
     default:
       return; // No auto-reminder for other status
   }

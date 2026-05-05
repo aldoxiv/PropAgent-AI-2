@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Lead, Viewing, LeadStatus, ViewingStatus, Property, Reminder, AppSettings } from "../types";
 import { db, handleFirestoreError, OperationType } from "../lib/firebase";
 import { collection, query, onSnapshot, updateDoc, doc, deleteDoc, getDocs, addDoc, serverTimestamp, setDoc } from "firebase/firestore";
-import { Users, Calendar, CheckCircle2, XCircle, ChevronRight, LayoutDashboard, Building2, Bell, Clock, AlertCircle, Search, Settings, Save, Briefcase } from "lucide-react";
+import { Users, Calendar, CheckCircle2, XCircle, ChevronRight, LayoutDashboard, Building2, Bell, Clock, AlertCircle, Search, Settings, Save, Briefcase, TrendingUp, Star } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { LeadCRMForm } from "./LeadCRMForm";
 
@@ -114,6 +114,11 @@ export function Dashboard({ properties }: { properties: Property[] }) {
             </div>
             <div className="w-px h-8 bg-[rgba(26,26,26,0.1)]" />
             <div className="text-right">
+              <p className="text-xs font-semibold">{leads.filter(l => (l.score || 0) >= 80).length}</p>
+              <p className="text-[9px] uppercase tracking-widest text-[rgba(26,26,26,0.5)]">Prioritários</p>
+            </div>
+            <div className="w-px h-8 bg-[rgba(26,26,26,0.1)]" />
+            <div className="text-right">
               <p className="text-xs font-semibold">{viewings.filter(v => v.status === ViewingStatus.PENDING).length}</p>
               <p className="text-[9px] uppercase tracking-widest text-[rgba(26,26,26,0.5)]">Visitas Pendentes</p>
             </div>
@@ -176,6 +181,21 @@ export function Dashboard({ properties }: { properties: Property[] }) {
                 </div>
               </div>
 
+              {(leads.length > 0) && (
+                <div className="flex gap-4 mb-4">
+                  <div className="p-4 bg-white border border-[rgba(26,26,26,0.1)] rounded-sm flex-1">
+                    <p className="text-[9px] uppercase tracking-widest opacity-40 font-bold mb-1">Score Médio</p>
+                    <p className="text-2xl font-serif">
+                      {Math.round(leads.reduce((acc, l) => acc + (l.score || 0), 0) / leads.length)}
+                    </p>
+                  </div>
+                  <div className="p-4 bg-white border border-[rgba(26,26,26,0.1)] rounded-sm flex-1">
+                    <p className="text-[9px] uppercase tracking-widest opacity-40 font-bold mb-1">Qualificação Alta</p>
+                    <p className="text-2xl font-serif">{leads.filter(l => (l.score || 0) > 70).length}</p>
+                  </div>
+                </div>
+              )}
+
               {leads.filter(l => 
                 l.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                 l.email.toLowerCase().includes(searchQuery.toLowerCase())
@@ -189,14 +209,31 @@ export function Dashboard({ properties }: { properties: Property[] }) {
                   l.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                   l.email.toLowerCase().includes(searchQuery.toLowerCase())
                 )
+                .sort((a, b) => (b.score || 0) - (a.score || 0))
                 .map((lead) => (
-                <div key={lead.id} className="bg-white border border-[rgba(26,26,26,0.1)] p-6 rounded-sm flex justify-between items-center group">
+                <div key={lead.id} className={`bg-white border p-6 rounded-sm flex justify-between items-center group transition-all ${
+                  (lead.score || 0) > 80 ? 'border-l-4 border-l-[var(--color-gold)] shadow-md' : 'border-[rgba(26,26,26,0.1)]'
+                }`}>
                   <div className="flex items-center gap-6">
-                    <div className="w-12 h-12 bg-[var(--color-paper)] rounded-full flex items-center justify-center font-serif text-xl">
-                      {lead.name[0]}
+                    <div className="relative">
+                      <div className="w-12 h-12 bg-[var(--color-paper)] rounded-full flex items-center justify-center font-serif text-xl">
+                        {lead.name[0]}
+                      </div>
+                      {(lead.score || 0) > 80 && (
+                        <div className="absolute -top-1 -right-1 bg-[var(--color-gold)] text-white p-1 rounded-full shadow-sm">
+                          <Star size={10} fill="currentColor" />
+                        </div>
+                      )}
                     </div>
                     <div>
-                      <h4 className="font-serif text-xl leading-tight">{lead.name}</h4>
+                      <div className="flex items-center gap-3">
+                        <h4 className="font-serif text-xl leading-tight">{lead.name}</h4>
+                        <div className={`px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-widest ${
+                          (lead.score || 0) > 70 ? 'bg-amber-50 text-amber-600' : 'bg-gray-50 text-gray-400'
+                        }`}>
+                          Score: {lead.score || 0}
+                        </div>
+                      </div>
                       <div className="flex items-center gap-3 text-[10px] text-[rgba(26,26,26,0.5)] uppercase tracking-wide">
                         <span>{lead.email}</span>
                         <span className="w-1 h-1 bg-[rgba(26,26,26,0.2)] rounded-full" />

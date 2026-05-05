@@ -32,7 +32,7 @@ service cloud.firestore {
 
     function isValidLead(data) {
       return data.keys().hasAll(['name', 'email', 'status', 'createdAt', 'lastActive'])
-        && data.keys().hasOnly(['name', 'email', 'phone', 'propertyId', 'status', 'createdAt', 'lastActive', 'budget', 'locationPreference', 'timeline', 'crmSynced'])
+        && data.keys().hasOnly(['name', 'email', 'phone', 'propertyId', 'status', 'createdAt', 'lastActive', 'budget', 'locationPreference', 'timeline', 'crmSynced', 'score'])
         && data.name is string && data.name.size() >= 2 && data.name.size() <= 100
         && data.email is string && data.email.size() >= 5 && data.email.size() <= 100
         && (data.get('phone', '') == '' || (data.phone is string && data.phone.size() <= 20))
@@ -115,10 +115,13 @@ service cloud.firestore {
       allow get: if isAdmin();
       allow list: if isAdmin();
       allow update: if (isAdmin() && isValidLeadUpdate(incoming()) && (
-        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'lastActive', 'name', 'email', 'phone', 'propertyId', 'budget', 'locationPreference', 'timeline', 'crmSynced'])
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'lastActive', 'name', 'email', 'phone', 'propertyId', 'budget', 'locationPreference', 'timeline', 'crmSynced', 'score'])
       )) || (
         // Public can update their own lead's qualification info during chat
-        isValidLeadUpdate(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['budget', 'locationPreference', 'timeline', 'lastActive', 'crmSynced'])
+        isValidLeadUpdate(incoming()) && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['budget', 'locationPreference', 'timeline', 'lastActive', 'crmSynced', 'score'])
+          || incoming().diff(existing()).affectedKeys().hasOnly(['status', 'lastActive', 'score'])
+        )
       );
       allow delete: if isAdmin();
 

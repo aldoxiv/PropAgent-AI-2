@@ -36,6 +36,7 @@ export interface Lead {
   locationPreference?: string;
   timeline?: string;
   crmSynced?: boolean;
+  score?: number;
 }
 
 export interface Message {
