@@ -1,6 +1,6 @@
 import { Lead, LeadStatus } from "../types";
 import { db, handleFirestoreError, OperationType } from "../lib/firebase";
-import { updateDoc, doc } from "firebase/firestore";
+import { updateDoc, doc, serverTimestamp } from "firebase/firestore";
 
 /**
  * Calculates a lead priority score (0-100) based on various engagement factors.
@@ -60,7 +60,8 @@ export async function updateLeadScore(lead: Lead) {
 
   try {
     await updateDoc(doc(db, 'leads', lead.id), {
-      score: newScore
+      score: newScore,
+      lastActive: serverTimestamp()
     });
     console.log(`[SCORING SERVICE] Lead ${lead.id} priority score updated to ${newScore}`);
     return newScore;

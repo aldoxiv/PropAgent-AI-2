@@ -37,12 +37,13 @@ service cloud.firestore {
         && data.email is string && data.email.size() >= 5 && data.email.size() <= 100
         && (data.get('phone', '') == '' || (data.phone is string && data.phone.size() <= 20))
         && (data.get('propertyId', null) == null || (data.propertyId is string && isValidId(data.propertyId)))
-        && data.status in ['new', 'contacted', 'interested', 'viewing_scheduled', 'viewing_completed', 'closed']
+        && data.status is string && data.status in ['new', 'contacted', 'interested', 'viewing_scheduled', 'viewing_completed', 'closed']
         && (data.get('budget', '') == '' || data.budget is string)
         && (data.get('locationPreference', '') == '' || data.locationPreference is string)
         && (data.get('timeline', '') == '' || data.timeline is string)
         && (data.get('crmSynced', false) == false || data.crmSynced is bool)
-        && data.lastActive == request.time;
+        && (data.get('score', 0) is int || data.get('score', 0) is number)
+        && (request.method == 'create' ? data.lastActive == request.time : (data.lastActive == request.time || data.lastActive == existing().lastActive));
     }
 
     function isValidLeadCreate(data) {
