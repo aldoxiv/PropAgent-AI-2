@@ -6,7 +6,7 @@ import { Dashboard } from "./components/Dashboard";
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { db, auth, handleFirestoreError, OperationType } from "./lib/firebase";
-import { collection, onSnapshot, addDoc, query, getDocs, writeBatch, doc } from "firebase/firestore";
+import { collection, onSnapshot, addDoc, query, getDocs, writeBatch, doc, updateDoc } from "firebase/firestore";
 import { motion, AnimatePresence } from "motion/react";
 import { Building2, MessageSquare, ShieldCheck, ArrowRight, Home, LogOut, LogIn } from "lucide-react";
 
@@ -32,7 +32,7 @@ const INITIAL_PROPERTIES: Omit<Property, 'id'>[] = [
     description: "Minimalist perfection overlooking the city's greenest heart. Smart-home integration, wellness suite with sauna, and a chef-grade kitchen.",
     price: 4200000,
     address: "55 Parkside Dr, London, UK",
-    imageUrl: "https://images.unsplash.com/photo-1600585154340-be6191daad10?auto=format&fit=crop&q=80&w=1000",
+    imageUrl: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=1000",
     type: "condo"
   }
 ];
@@ -53,6 +53,14 @@ export default function App() {
     const unsubProps = onSnapshot(collection(db, 'properties'), (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
       setProperties(data);
+      
+      // Auto-migration for Elysium Parkside broken image
+      const brokenElysium = data.find(p => p.title === "Elysium Parkside" && p.imageUrl.includes("1600585154340-be6191daad10"));
+      if (brokenElysium) {
+        updateDoc(doc(db, 'properties', brokenElysium.id), {
+          imageUrl: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=1000"
+        }).catch(e => console.error("Auto-migration failed", e));
+      }
     }, (error) => handleFirestoreError(error, OperationType.GET, 'properties'));
 
     return () => {
