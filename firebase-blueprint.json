@@ -29,7 +29,8 @@
         "budget": { "type": "string" },
         "locationPreference": { "type": "string" },
         "timeline": { "type": "string" },
-        "crmSynced": { "type": "boolean" }
+        "crmSynced": { "type": "boolean" },
+        "score": { "type": "number" }
       },
       "required": ["name", "email", "status", "createdAt"]
     },
@@ -41,9 +42,24 @@
         "leadId": { "type": "string" },
         "propertyId": { "type": "string" },
         "dateTime": { "type": "string", "format": "date-time" },
-        "status": { "type": "string", "enum": ["pending", "confirmed", "cancelled"] }
+        "status": { "type": "string", "enum": ["pending", "confirmed", "cancelled"] },
+        "agentId": { "type": "string" },
+        "notes": { "type": "string" },
+        "confirmedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["leadId", "propertyId", "dateTime", "status"]
+    },
+    "Availability": {
+      "title": "Availability",
+      "description": "An agent availability slot",
+      "type": "object",
+      "properties": {
+        "startTime": { "type": "number" },
+        "endTime": { "type": "number" },
+        "isBooked": { "type": "boolean" },
+        "agentId": { "type": "string" }
+      },
+      "required": ["startTime", "endTime", "isBooked", "agentId"]
     },
     "Message": {
       "title": "Message",
@@ -103,6 +119,10 @@
     "/reminders/{reminderId}": {
       "schema": "Reminder",
       "description": "Collection of follow-up reminders"
+    },
+    "/availability/{slotId}": {
+      "schema": "Availability",
+      "description": "Collection of agent availability slots"
     }
   }
 }

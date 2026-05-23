@@ -385,12 +385,15 @@ export function Dashboard({ properties }: { properties: Property[] }) {
                         {viewing.status}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-xs mb-6 text-[rgba(26,26,26,0.6)]">
+                    <div className="flex items-center gap-2 text-xs mb-2 text-[rgba(26,26,26,0.6)]">
                        <Calendar size={14} />
                        {new Date(viewing.dateTime).toLocaleString()}
                     </div>
+                    {viewing.notes && (<p className="text-[10px] mb-4 opacity-50 italic">"{viewing.notes}"</p>)}
                     <div className="flex gap-2">
-                       <button className="flex-1 py-2 text-[10px] uppercase tracking-widest font-bold bg-[var(--color-ink)] text-white hover:bg-opacity-90 transition-all rounded">Confirm</button>
+                       <button className="flex-1 py-2 text-[10px] uppercase tracking-widest font-bold bg-[var(--color-ink)] text-white hover:bg-opacity-90 transition-all rounded">
+                         Invite Sent
+                       </button>
                        <button className="flex-1 py-2 text-[10px] uppercase tracking-widest font-bold border border-[rgba(26,26,26,0.1)] hover:bg-red-50 hover:text-red-600 transition-all rounded">Cancel</button>
                     </div>
                   </div>

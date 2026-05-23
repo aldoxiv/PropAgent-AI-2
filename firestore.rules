@@ -66,12 +66,23 @@ service cloud.firestore {
 
     function isValidViewing(data) {
       return data.keys().hasAll(['leadId', 'propertyId', 'dateTime', 'status', 'createdAt'])
-        && data.keys().size() == 5
+        && data.keys().hasOnly(['leadId', 'propertyId', 'dateTime', 'status', 'createdAt', 'agentId', 'notes', 'confirmedAt'])
         && isValidId(data.leadId)
         && isValidId(data.propertyId)
         && data.dateTime is number && data.dateTime > 0
         && data.status in ['pending', 'confirmed', 'cancelled']
-        && data.createdAt == request.time;
+        && data.createdAt == request.time
+        && (data.get('agentId', '') == '' || data.agentId is string)
+        && (data.get('notes', '') == '' || data.notes is string)
+        && (data.get('confirmedAt', request.time) == request.time);
+    }
+
+    function isValidAvailability(data) {
+      return data.keys().hasAll(['startTime', 'endTime', 'isBooked', 'agentId'])
+        && data.keys().size() == 4
+        && data.startTime is number && data.endTime is number
+        && data.isBooked is bool
+        && data.agentId is string;
     }
 
     function isValidReminder(data) {
@@ -147,7 +158,18 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // 4. Reminders
+    // 4. Availability
+    match /availability/{slotId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidAvailability(incoming()) && isValidId(slotId);
+      allow update: if (isAdmin() && isValidAvailability(incoming())) || (
+        // Public can "book" a slot
+        isValidAvailability(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['isBooked'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    // 5. Reminders
     match /reminders/{reminderId} {
       // Public create reminder (AI bot triggered from client)
       allow create: if isValidReminderCreate(incoming()) && isValidId(reminderId);

@@ -9,6 +9,7 @@ import { db, auth, handleFirestoreError, OperationType } from "./lib/firebase";
 import { collection, onSnapshot, addDoc, query, getDocs, writeBatch, doc, updateDoc } from "firebase/firestore";
 import { motion, AnimatePresence } from "motion/react";
 import { Building2, MessageSquare, ShieldCheck, ArrowRight, Home, LogOut, LogIn } from "lucide-react";
+import { seedAvailability } from "./services/schedulingService";
 
 const INITIAL_PROPERTIES: Omit<Property, 'id'>[] = [
   {
@@ -104,6 +105,9 @@ export default function App() {
           batch.set(newDoc, prop);
         });
         await batch.commit().catch(e => handleFirestoreError(e, OperationType.WRITE, 'properties-batch'));
+        
+        // Seed availability slots
+        await seedAvailability();
       }
     } catch (e) {
       console.error("Seeding failed", e);

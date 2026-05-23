@@ -52,6 +52,17 @@ export interface Viewing {
   propertyId: string;
   dateTime: number;
   status: ViewingStatus;
+  agentId?: string; // Support for multiple agents
+  notes?: string;
+  confirmedAt?: number;
+}
+
+export interface AvailabilitySlot {
+  id: string;
+  startTime: number;
+  endTime: number;
+  isBooked: boolean;
+  agentId: string;
 }
 
 export interface Reminder {
