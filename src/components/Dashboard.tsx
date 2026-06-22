@@ -2,9 +2,22 @@ import { useState, useEffect } from "react";
 import { Lead, Viewing, LeadStatus, ViewingStatus, Property, Reminder, AppSettings } from "../types";
 import { db, handleFirestoreError, OperationType } from "../lib/firebase";
 import { collection, query, onSnapshot, updateDoc, doc, deleteDoc, getDocs, addDoc, serverTimestamp, setDoc } from "firebase/firestore";
-import { Users, Calendar, CheckCircle2, XCircle, ChevronRight, LayoutDashboard, Building2, Bell, Clock, AlertCircle, Search, Settings, Save, Briefcase, TrendingUp, Star } from "lucide-react";
+import { Users, Calendar, CheckCircle2, XCircle, ChevronRight, LayoutDashboard, Building2, Bell, Clock, AlertCircle, Search, Settings, Save, Briefcase, TrendingUp, Star, BarChart3, PieChart as PieIcon } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { LeadCRMForm } from "./LeadCRMForm";
+import { 
+  ResponsiveContainer, 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  Tooltip, 
+  Legend, 
+  PieChart, 
+  Pie, 
+  Cell, 
+  CartesianGrid 
+} from "recharts";
 
 export function Dashboard({ properties }: { properties: Property[] }) {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -182,18 +195,183 @@ export function Dashboard({ properties }: { properties: Property[] }) {
               </div>
 
               {(leads.length > 0) && (
-                <div className="flex gap-4 mb-4">
-                  <div className="p-4 bg-white border border-[rgba(26,26,26,0.1)] rounded-sm flex-1">
-                    <p className="text-[9px] uppercase tracking-widest opacity-40 font-bold mb-1">Score Médio</p>
-                    <p className="text-2xl font-serif">
-                      {Math.round(leads.reduce((acc, l) => acc + (l.score || 0), 0) / leads.length)}
-                    </p>
+                <>
+                  <div className="flex gap-4 mb-6">
+                    <div className="p-4 bg-white border border-[rgba(26,26,26,0.1)] rounded-sm flex-1">
+                      <p className="text-[9px] uppercase tracking-widest opacity-40 font-bold mb-1">Score Médio</p>
+                      <p className="text-2xl font-serif">
+                        {Math.round(leads.reduce((acc, l) => acc + (l.score || 0), 0) / leads.length)}
+                      </p>
+                    </div>
+                    <div className="p-4 bg-white border border-[rgba(26,26,26,0.1)] rounded-sm flex-1">
+                      <p className="text-[9px] uppercase tracking-widest opacity-40 font-bold mb-1">Qualificação Alta</p>
+                      <p className="text-2xl font-serif">{leads.filter(l => (l.score || 0) > 70).length}</p>
+                    </div>
                   </div>
-                  <div className="p-4 bg-white border border-[rgba(26,26,26,0.1)] rounded-sm flex-1">
-                    <p className="text-[9px] uppercase tracking-widest opacity-40 font-bold mb-1">Qualificação Alta</p>
-                    <p className="text-2xl font-serif">{leads.filter(l => (l.score || 0) > 70).length}</p>
-                  </div>
-                </div>
+
+                  {(() => {
+                    // 1. Status distribution
+                    const statusLabels: Record<LeadStatus, string> = {
+                      [LeadStatus.NEW]: "Novo",
+                      [LeadStatus.CONTACTED]: "Contatado",
+                      [LeadStatus.INTERESTED]: "Interessado",
+                      [LeadStatus.VIEWING_SCHEDULED]: "Agendado",
+                      [LeadStatus.VIEWING_COMPLETED]: "Visita Feita",
+                      [LeadStatus.CLOSED]: "Fechado"
+                    };
+
+                    const statusColors: Record<LeadStatus, string> = {
+                      [LeadStatus.NEW]: "#3182ce",
+                      [LeadStatus.CONTACTED]: "#4299e1",
+                      [LeadStatus.INTERESTED]: "#b8966c",
+                      [LeadStatus.VIEWING_SCHEDULED]: "#319795",
+                      [LeadStatus.VIEWING_COMPLETED]: "#38a169",
+                      [LeadStatus.CLOSED]: "#1a1a1a"
+                    };
+
+                    const statusData = Object.values(LeadStatus).map(status => {
+                      const count = leads.filter(l => l.status === status).length;
+                      return {
+                        name: statusLabels[status] || status,
+                        value: count,
+                        color: statusColors[status] || "#94a3b8"
+                      };
+                    }).filter(item => item.value > 0);
+
+                    // 2. Score distribution
+                    const scoreData = [
+                      { name: "0-20 (Frio)", count: leads.filter(l => (l.score || 0) <= 20).length, fill: "#cbd5e1" },
+                      { name: "21-40 (Morno)", count: leads.filter(l => (l.score || 0) > 20 && (l.score || 0) <= 40).length, fill: "#94a3b8" },
+                      { name: "41-60 (Promissor)", count: leads.filter(l => (l.score || 0) > 40 && (l.score || 0) <= 60).length, fill: "#64748b" },
+                      { name: "61-80 (Quente)", count: leads.filter(l => (l.score || 0) > 60 && (l.score || 0) <= 80).length, fill: "#b8966c" },
+                      { name: "81-100 (Crítico)", count: leads.filter(l => (l.score || 0) > 80).length, fill: "#1a1a1a" }
+                    ];
+
+                    const CustomTooltip = ({ active, payload }: any) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="bg-white border border-[rgba(26,26,26,0.1)] p-3 rounded shadow-sm text-xs font-sans">
+                            <p className="font-semibold text-[10px] uppercase tracking-wider text-[rgba(26,26,26,0.5)] mb-1">
+                              {payload[0].name}
+                            </p>
+                            <p className="text-sm font-serif text-[var(--color-ink)] font-bold">
+                              Leads: <span className="font-sans font-extrabold">{payload[0].value}</span>
+                            </p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    };
+
+                    return (
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        {/* Status Distribution (Pie Chart) */}
+                        <div className="bg-white border border-[rgba(26,26,26,0.1)] p-6 rounded-sm flex flex-col justify-between">
+                          <div className="flex justify-between items-center mb-4">
+                            <div>
+                              <h4 className="font-serif text-lg tracking-tight">Status dos Leads</h4>
+                              <p className="text-[9px] uppercase tracking-widest text-[rgba(26,26,26,0.4)] font-bold">Distribuição do Pipeline</p>
+                            </div>
+                            <PieIcon size={16} className="text-[var(--color-gold)]" />
+                          </div>
+                          
+                          <div className="h-64 flex items-center justify-center relative">
+                            {statusData.length > 0 ? (
+                              <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                  <Pie
+                                    data={statusData}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={60}
+                                    outerRadius={85}
+                                    paddingAngle={4}
+                                    dataKey="value"
+                                  >
+                                    {statusData.map((entry, index) => (
+                                      <Cell key={`cell-${index}`} fill={entry.color} />
+                                    ))}
+                                  </Pie>
+                                  <Tooltip content={<CustomTooltip />} />
+                                </PieChart>
+                              </ResponsiveContainer>
+                            ) : (
+                              <span className="text-xs text-[rgba(26,26,26,0.4)] uppercase tracking-widest">Sem dados</span>
+                            )}
+                            
+                            {/* Center display text for Pie Chart */}
+                            {statusData.length > 0 && (
+                              <div className="absolute flex flex-col items-center justify-center">
+                                <span className="text-2xl font-serif font-bold text-[var(--color-ink)]">{leads.length}</span>
+                                <span className="text-[8px] uppercase tracking-widest text-[rgba(26,26,26,0.4)] font-bold">Leads</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Legend */}
+                          <div className="flex flex-wrap gap-x-4 gap-y-2 mt-4 justify-center border-t border-[rgba(26,26,26,0.05)] pt-4">
+                            {statusData.map((item, index) => (
+                              <div key={index} className="flex items-center gap-1.5 text-[10px]">
+                                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                                <span className="text-[rgba(26,26,26,0.6)] font-medium">{item.name}</span>
+                                <span className="font-bold text-[var(--color-ink)]">({item.value})</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Priority Score Distribution (Bar Chart) */}
+                        <div className="bg-white border border-[rgba(26,26,26,0.1)] p-6 rounded-sm flex flex-col justify-between">
+                          <div className="flex justify-between items-center mb-4">
+                            <div>
+                              <h4 className="font-serif text-lg tracking-tight">Distribuição de Score</h4>
+                              <p className="text-[9px] uppercase tracking-widest text-[rgba(26,26,26,0.4)] font-bold">Níveis de Prioridade do Lead</p>
+                            </div>
+                            <BarChart3 size={16} className="text-[var(--color-gold)]" />
+                          </div>
+
+                          <div className="h-64 pt-2">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={scoreData} margin={{ top: 10, right: 10, left: -25, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="2 2" stroke="rgba(26,26,26,0.05)" vertical={false} />
+                                <XAxis 
+                                  dataKey="name" 
+                                  tickLine={false} 
+                                  axisLine={false} 
+                                  tick={{ fill: "rgba(26,26,26,0.5)", fontSize: 9, fontWeight: 500 }} 
+                                />
+                                <YAxis 
+                                  tickLine={false} 
+                                  axisLine={false} 
+                                  allowDecimals={false}
+                                  tick={{ fill: "rgba(26,26,26,0.5)", fontSize: 9, fontWeight: 500 }} 
+                                />
+                                <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(26,26,26,0.02)" }} />
+                                <Bar dataKey="count" radius={[3, 3, 0, 0]} maxBarSize={45}>
+                                  {scoreData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                                  ))}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+
+                          {/* Legend / Metrics */}
+                          <div className="flex flex-wrap gap-x-4 gap-y-2 mt-4 justify-center border-t border-[rgba(26,26,26,0.05)] pt-4">
+                            <div className="flex items-center gap-1.5 text-[10px]">
+                              <span className="w-2.5 h-2.5 rounded-sm bg-[#b8966c]" />
+                              <span className="text-[rgba(26,26,26,0.6)] font-medium">Prioridade Quente/Crítico ({leads.filter(l => (l.score || 0) > 60).length})</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[10px]">
+                              <span className="w-2.5 h-2.5 rounded-sm bg-[#64748b]" />
+                              <span className="text-[rgba(26,26,26,0.6)] font-medium">Prioridade Média ({leads.filter(l => (l.score || 0) > 20 && (l.score || 0) <= 60).length})</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </>
               )}
 
               {leads.filter(l => 
