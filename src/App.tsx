@@ -74,7 +74,18 @@ export default function App() {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-    } catch (error) {
+    } catch (error: any) {
+      if (
+        error?.code === 'auth/popup-closed-by-user' ||
+        error?.code === 'auth/cancelled-popup-request'
+      ) {
+        // User closed or cancelled the login popup window
+        return;
+      }
+      if (error?.code === 'auth/popup-blocked') {
+        alert("O pop-up de login foi bloqueado pelo navegador. Por favor, permita pop-ups para este site.");
+        return;
+      }
       console.error("Sign in failed", error);
     }
   };
